@@ -1,0 +1,66 @@
+>> node & npm
+cmd prompt
+    winget install OpenJS.NodeJS.LTS
+
+>> PostGreSQL
+    https://www.enterprisedb.com/downloads/postgres-postgresql-downloads
+    (command line does not work)
+
+>> Setup client source
+    navigate to root of dev directory
+        md client
+        cd client
+        npm init -y
+        npm install @babylonjs/core
+        npm install -D typecript
+        npx tsc --init
+
+    >> json tsconfig (client)
+
+    In "compilerOptions"
+
+        // File Layout
+        "rootDir": "./src",
+        "outDir": "./dist",
+
+        // Environment Settings
+        "module": "es2022",
+        "target": "es2022",
+        "moduleResolution":"node",
+        "strict": true,
+
+    add "include" after compilerOptions
+
+        "include": ["src/**/*"]
+
+    >> Client Subdirectories
+        md src
+        md dist
+
+>> Setup Server source
+    navigate to root of dev directory
+        md server
+        cd server
+        npm init -y
+        npm install fastify ws pg
+        npm install -D typescript tsx @types/node
+        (needed to approve extra packages here "esbuild")
+        npx tsc --init
+
+        >> json tsconfig (client)
+
+    In "compilerOptions"
+
+        // File Layout
+        "rootDir": "./src",
+        "outDir": "./dist",
+
+        // Environment Settings
+        "module": "nodenext",
+        "target": "es2022",
+        "moduleResolution":"nodeext",
+        "strict": true,
+
+    >> Server Subdirectories
+        md src
+        md dist
