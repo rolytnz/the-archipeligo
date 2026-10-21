@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    />
+
+    <title>The Archipeligo</title>
+
+    <style>
+
+        body {
+            font-family: sans-serif;
+            padding: 2rem;
+        }
+
+        button {
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        pre {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f4f4f4;
+            border-radius: 4px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <h1>The Archipeligo</h1>
+
+    <button id="generatePlanetButton">
+        Generate Planet
+    </button>
+
+    <pre id="output">
+Press Generate Planet...
+    </pre>
+
+    <script>
+
+        const button =
+            document.getElementById(
+                "generatePlanetButton"
+            );
+
+        const output =
+            document.getElementById(
+                "output"
+            );
+
+        button.addEventListener(
+            "click",
+            async () => {
+
+                output.textContent =
+                    "Generating...";
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/api/planet"
+                        );
+
+                    const planet =
+                        await response.json();
+
+                    output.textContent =
+
+`Planet ID: ${planet.id}
+
+Radius: ${planet.radiusKm} km
+
+Regions: ${planet.regions.length}
+
+Vertices: ${planet.mesh.vertices.length / 3}
+
+Triangles: ${planet.mesh.indices.length / 3}
+
+Cells: ${planet.mesh.cells.length}`;
+
+                    console.log(
+                        planet
+                    );
+                }
+                catch (error) {
+
+                    output.textContent =
+                        `Error: ${error}`;
+                }
+            }
+        );
+
+    </script>
+
+</body>
+</html>

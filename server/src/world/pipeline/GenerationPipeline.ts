@@ -1,28 +1,41 @@
-import { GenerationContext } from "./GenerationContext.js";
-import { GenerationStage } from "./GenerationStage.js";
+import { GenerationContext }
+from "./GenerationContext.js";
+
+import { GenerationStage }
+from "./GenerationStage.js";
 
 export class GenerationPipeline {
 
-    private readonly stages: GenerationStage[] = [];
+    private readonly stages:
+        GenerationStage[] = [];
 
     public addStage(
         stage: GenerationStage
-    ): void {
+    ): GenerationPipeline {
 
-        this.stages.push(stage);
+        this.stages.push(
+            stage
+        );
+
+        return this;
     }
 
     public execute(
         context: GenerationContext
     ): void {
 
-        for (const stage of this.stages) {
+        for (
+            const stage
+            of this.stages
+        ) {
 
             console.log(
-                `Executing stage: ${stage.name}`
+                `Running stage: ${stage.name}`
             );
 
-            stage.execute(context);
+            stage.execute(
+                context
+            );
         }
     }
 }

@@ -1,0 +1,4 @@
+src/services/PlanetGeometryService.ts:285:9 - error TS2322: Type 'Region | undefined' is not assignable to type 'Region'.
+  Type 'undefined' is not assignable to type 'Region'.
+
+285         return nearest;

@@ -1,0 +1,12 @@
+{
+  "name": "the-archipeligo",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "allowScripts": {
+    "esbuild": true
+  }
+}

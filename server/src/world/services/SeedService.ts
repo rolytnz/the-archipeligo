@@ -1,7 +1,11 @@
 import * as crypto from "crypto";
 
 import { ISeedService } from "./ISeedService.js";
-import { SeedTree } from "../types/SeedTree.js";
+
+import {
+    SeedTree
+}
+from "@archipeligo/shared";
 
 export class SeedService implements ISeedService {
 

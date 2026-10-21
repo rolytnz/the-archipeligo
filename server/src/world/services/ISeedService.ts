@@ -1,4 +1,7 @@
-import { SeedTree } from "../types/SeedTree.js";
+import {
+    SeedTree
+}
+from "@archipeligo/shared";
 
 export interface ISeedService {
 

@@ -1,5 +1,8 @@
-import { GenerationStage } from "../pipeline/GenerationStage.js";
-import { GenerationContext } from "../pipeline/GenerationContext.js";
+import { GenerationStage }
+from "../pipeline/GenerationStage.js";
+
+import { GenerationContext }
+from "../pipeline/GenerationContext.js";
 
 export class RegionStage
     implements GenerationStage {
@@ -11,16 +14,12 @@ export class RegionStage
         context: GenerationContext
     ): void {
 
-        const seed =
-            context
-                .planet
-                .seeds
-                .regionSeed;
+        const regionCount =
+            context.planet.regions.length;
 
         console.log(
-            `Region seed: ${seed}`
-        );
 
-        context.planet.regions = [];
+            `Planet contains ${regionCount} regions.`
+        );
     }
 }

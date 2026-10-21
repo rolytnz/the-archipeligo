@@ -1,5 +1,8 @@
-import { GenerationStage } from "../pipeline/GenerationStage.js";
-import { GenerationContext } from "../pipeline/GenerationContext.js";
+import { GenerationStage }
+from "../pipeline/GenerationStage.js";
+
+import { GenerationContext }
+from "../pipeline/GenerationContext.js";
 
 export class IslandStage
     implements GenerationStage {
@@ -11,16 +14,29 @@ export class IslandStage
         context: GenerationContext
     ): void {
 
-        const seed =
-            context
-                .planet
-                .seeds
-                .islandSeed;
+        const regionCount =
+            context.planet.regions.length;
+
+        const cellCount =
+            context.planet.mesh.cells.length;
 
         console.log(
-            `Island seed: ${seed}`
+
+            `Preparing island generation ` +
+
+            `for ${regionCount} regions ` +
+
+            `and ${cellCount} cells.`
         );
 
-        context.planet.islands = [];
+        //
+        // Future implementation:
+        //
+        // - Select island seed cells
+        // - Grow contiguous landmasses
+        // - Assign islandId
+        // - Set elevationM
+        // - Mark isLand
+        //
     }
 }
