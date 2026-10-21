@@ -1,19 +1,30 @@
+import * as BABYLON
+from "@babylonjs/core";
+
+import {
+    createScene
+}
+from "./scenes/PlanetScene.js";
+
+const canvas =
+    document.getElementById(
+        "renderCanvas"
+    ) as HTMLCanvasElement;
+
 const button =
     document.getElementById(
         "generatePlanetButton"
     ) as HTMLButtonElement;
 
-const output =
-    document.getElementById(
-        "output"
-    ) as HTMLPreElement;
+let engine:
+    BABYLON.Engine | undefined;
+
+let scene:
+    BABYLON.Scene | undefined;
 
 button.addEventListener(
     "click",
     async () => {
-
-        output.textContent =
-            "Generating...";
 
         const response =
             await fetch(
@@ -23,29 +34,37 @@ button.addEventListener(
         const planet =
             await response.json();
 
-        output.textContent =
-            JSON.stringify(
-                {
-                    id:
-                        planet.id,
+        if (!engine) {
 
-                    radiusKm:
-                        planet.radiusKm,
+            engine =
+                new BABYLON.Engine(
+                    canvas,
+                    true
+                );
+        }
 
-                    regions:
-                        planet.regions.length,
+        scene?.dispose();
 
-                    vertices:
-                        planet.mesh.vertices.length / 3,
-
-                    triangles:
-                        planet.mesh.indices.length / 3,
-
-                    cells:
-                        planet.mesh.cells.length
-                },
-                null,
-                2
+        scene =
+            createScene(
+                engine,
+                canvas,
+                planet
             );
+
+        engine.runRenderLoop(
+            () => {
+
+                scene?.render();
+            }
+        );
+    }
+);
+
+window.addEventListener(
+    "resize",
+    () => {
+
+        engine?.resize();
     }
 );

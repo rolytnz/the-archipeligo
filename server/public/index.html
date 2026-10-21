@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
     <meta charset="UTF-8" />
 
     <meta
@@ -12,93 +13,294 @@
 
     <style>
 
+        html,
         body {
-            font-family: sans-serif;
-            padding: 2rem;
+
+            width: 100%;
+            height: 100%;
+
+            margin: 0;
+            overflow: hidden;
+
+            background: #0d1117;
+        }
+
+        #toolbar {
+
+            position: absolute;
+
+            top: 10px;
+            left: 10px;
+
+            z-index: 100;
+
+            background: rgba(
+                0,
+                0,
+                0,
+                0.7
+            );
+
+            padding: 1rem;
+
+            border-radius: 8px;
         }
 
         button {
+
             padding: 0.75rem 1rem;
-            font-size: 1rem;
+
             cursor: pointer;
         }
 
-        pre {
-            margin-top: 1rem;
-            padding: 1rem;
-            background: #f4f4f4;
-            border-radius: 4px;
+        #renderCanvas {
+
+            width: 100vw;
+            height: 100vh;
+
+            display: block;
+
+            touch-action: none;
         }
 
     </style>
+
 </head>
 
 <body>
 
-    <h1>The Archipeligo</h1>
+    <div id="toolbar">
 
-    <button id="generatePlanetButton">
-        Generate Planet
-    </button>
+        <button id="generatePlanetButton">
+            Generate Planet
+        </button>
 
-    <pre id="output">
-Press Generate Planet...
-    </pre>
+    </div>
+
+    <canvas id="renderCanvas"></canvas>
+
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
 
     <script>
 
-        const button =
+        const canvas =
             document.getElementById(
+                "renderCanvas"
+            );
+
+        const engine =
+            new BABYLON.Engine(
+                canvas,
+                true
+            );
+
+        let scene = null;
+
+        async function loadPlanet() {
+
+            const response =
+                await fetch(
+                    "/api/planet"
+                );
+
+            return await response.json();
+        }
+
+        function renderPlanet(
+            planet
+        ) {
+
+            if (scene) {
+
+                scene.dispose();
+            }
+
+            scene =
+                new BABYLON.Scene(
+                    engine
+                );
+
+            scene.clearColor =
+                new BABYLON.Color4(
+                    0.02,
+                    0.02,
+                    0.05,
+                    1
+                );
+
+            const camera =
+                new BABYLON.ArcRotateCamera(
+
+                    "camera",
+
+                    0,
+
+                    Math.PI / 2.5,
+
+                    3,
+
+                    BABYLON.Vector3.Zero(),
+
+                    scene
+                );
+
+            camera.attachControl(
+                canvas,
+                true
+            );
+
+            new BABYLON.HemisphericLight(
+
+                "light",
+
+                new BABYLON.Vector3(
+                    0,
+                    1,
+                    0
+                ),
+
+                scene
+            );
+
+            const mesh =
+                new BABYLON.Mesh(
+                    "planet",
+                    scene
+                );
+
+            const positions =
+                planet.mesh.vertices;
+
+            const indices =
+                planet.mesh.indices;
+
+            const colors = [];
+
+            const regionColours =
+                new Map();
+
+            for (
+                const region
+                of planet.regions
+            ) {
+
+                regionColours.set(
+                    region.id,
+                    [
+                        Math.random(),
+                        Math.random(),
+                        Math.random()
+                    ]
+                );
+            }
+
+            for (
+                const cell
+                of planet.mesh.cells
+            ) {
+
+                const colour =
+                    regionColours.get(
+                        cell.regionId
+                    );
+
+                colors.push(
+
+                    colour[0],
+
+                    colour[1],
+
+                    colour[2],
+
+                    1
+                );
+            }
+
+            const normals = [];
+
+            BABYLON.VertexData
+                .ComputeNormals(
+
+                    positions,
+
+                    indices,
+
+                    normals
+                );
+
+            const vertexData =
+                new BABYLON.VertexData();
+
+            vertexData.positions =
+                positions;
+
+            vertexData.indices =
+                indices;
+
+            vertexData.colors =
+                colors;
+
+            vertexData.normals =
+                normals;
+
+            vertexData.applyToMesh(
+                mesh
+            );
+
+            const material =
+                new BABYLON.StandardMaterial(
+                    "material",
+                    scene
+                );
+
+            material.specularColor =
+                BABYLON.Color3.Black();
+
+            mesh.material =
+                material;
+
+            scene
+                .onBeforeRenderObservable
+                .add(() => {
+                    n.y += 0.001;
+                });
+        }
+
+        engine.runRenderLoop(
+            () => {
+
+                scene?.render();
+            }
+        );
+
+        window.addEventListener(
+            "resize",
+            () => {
+
+                engine.resize();
+            }
+        );
+
+        document
+            .getElementById(
                 "generatePlanetButton"
-            );
-
-        const output =
-            document.getElementById(
-                "output"
-            );
-
-        button.addEventListener(
-            "click",
-            async () => {
-
-                output.textContent =
-                    "Generating...";
-
-                try {
-
-                    const response =
-                        await fetch(
-                            "/api/planet"
-                        );
+            )
+            .addEventListener(
+                "click",
+                async () => {
 
                     const planet =
-                        await response.json();
-
-                    output.textContent =
-
-`Planet ID: ${planet.id}
-
-Radius: ${planet.radiusKm} km
-
-Regions: ${planet.regions.length}
-
-Vertices: ${planet.mesh.vertices.length / 3}
-
-Triangles: ${planet.mesh.indices.length / 3}
-
-Cells: ${planet.mesh.cells.length}`;
+                        await loadPlanet();
 
                     console.log(
                         planet
                     );
-                }
-                catch (error) {
 
-                    output.textContent =
-                        `Error: ${error}`;
+                    renderPlanet(
+                        planet
+                    );
                 }
-            }
-        );
+            );
 
     </script>
 

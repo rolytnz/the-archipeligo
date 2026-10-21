@@ -30,8 +30,8 @@ export class PlanetGenerator {
 
     public generate(
         seed: bigint,
-        regionCount = 64,
-        subdivisions = 5
+        regionCount = 128,
+        subdivisions = 6
     ): Planet {
 
         //
