@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import path from "node:path";
 
 import Fastify from "fastify";
@@ -8,53 +10,167 @@ from "@fastify/static";
 import {
     PlanetGenerator
 }
-from "./world/PlanetGenerator.js";
+from "./world/generators/PlanetGenerator.js";
 
-const fastify = Fastify({
-    logger: true
-});
+import {
+    PostgresPlanetRepository
+}
+from "./infrastructure/database/repositories/PostgresPlanetRepository.js";
+
+import {
+    DatabaseFactory
+}
+from "./infrastructure/database/DatabaseFactory.js";
+
+import {
+    Logger
+}
+from "./infrastructure/logging/Logger.js";
+
+const fastify =
+    Fastify({
+
+        logger: true,
+
+        bodyLimit:
+            100 * 1024 * 1024
+    });
 
 const planetGenerator =
     new PlanetGenerator();
 
+const repository =
+    new PostgresPlanetRepository();
+
 //
-// Routes
+// Generate + Save Planet
 //
 
 fastify.get(
     "/api/planet",
-    async () => {
+    async (
+        _request,
+        reply
+    ) => {
 
-        const planet =
-            planetGenerator.generate(
-                BigInt(
-                    Date.now()
-                )
+        try {
+
+            Logger.info(
+                "Generating planet..."
             );
 
-        console.log(
-            "Planet generated"
-        );
+            const planet =
+                planetGenerator.generate(
+                    BigInt(
+                        Date.now()
+                    )
+                );
 
-        return JSON.parse(
+            Logger.info(
+                "Planet generated.",
+                planet.id
+            );
 
-            JSON.stringify(
+            Logger.info(
+                "Saving planet..."
+            );
 
-                planet,
+            await repository.save(
+                planet
+            );
 
-                (
-                    _key,
-                    value
-                ) =>
+            Logger.info(
+                "Planet saved.",
+                planet.id
+            );
 
-                    typeof value ===
-                    "bigint"
+            return JSON.parse(
+                JSON.stringify(
+                    planet,
+                    (
+                        _key,
+                        value
+                    ) =>
+                        typeof value ===
+                        "bigint"
 
-                        ? value.toString()
+                            ? value.toString()
 
-                        : value
-            )
-        );
+                            : value
+                )
+            );
+        }
+        catch (
+            error
+        ) {
+
+            Logger.error(
+                "Planet generation failed."
+            );
+
+            Logger.error(
+                error
+            );
+
+            if (
+                error instanceof Error
+            ) {
+
+                Logger.error(
+                    error.message
+                );
+
+                Logger.error(
+                    error.stack
+                );
+            }
+
+            return reply
+                .status(500)
+                .send({
+
+                    success: false,
+
+                    message:
+                        "Planet generation failed."
+                });
+        }
+    }
+);
+
+fastify.get(
+    "/api/planets",
+    async (
+        _request,
+        reply
+    ) => {
+
+        try {
+
+            return await repository.list();
+        }
+        catch (
+            error
+        ) {
+
+            Logger.error(
+                "Failed to list planets."
+            );
+
+            Logger.error(
+                error
+            );
+
+            return reply
+                .status(500)
+                .send({
+
+                    success: false,
+
+                    message:
+                        "Failed to list planets."
+                });
+        }
     }
 );
 
@@ -67,8 +183,73 @@ fastify.get(
     async () => {
 
         return {
+
             status: "ok"
         };
+    }
+);
+
+//
+// Graceful Shutdown
+//
+
+async function shutdown(
+    signal: string
+): Promise<void> {
+
+    try {
+
+        Logger.info(
+            `Received ${signal}.`
+        );
+
+        await fastify.close();
+
+        await DatabaseFactory.shutdown();
+
+        Logger.info(
+            "Shutdown complete."
+        );
+
+        process.exit(
+            0
+        );
+    }
+    catch (
+        error
+    ) {
+
+        Logger.error(
+            "Shutdown failed."
+        );
+
+        Logger.error(
+            error
+        );
+
+        process.exit(
+            1
+        );
+    }
+}
+
+process.on(
+    "SIGINT",
+    () => {
+
+        void shutdown(
+            "SIGINT"
+        );
+    }
+);
+
+process.on(
+    "SIGTERM",
+    () => {
+
+        void shutdown(
+            "SIGTERM"
+        );
     }
 );
 
@@ -81,6 +262,16 @@ async function start():
 
     try {
 
+        Logger.info(
+            "Testing database connection..."
+        );
+
+        await DatabaseFactory.testConnection();
+
+        Logger.info(
+            "Database connection verified."
+        );
+
         await fastify.register(
             fastifyStatic,
             {
@@ -91,24 +282,39 @@ async function start():
             }
         );
 
+        const port =
+            Number(
+                process.env.PORT ??
+                3000
+            );
+
         await fastify.listen({
 
-            host: "0.0.0.0",
+            host:
+                "0.0.0.0",
 
-            port: 3000
+            port
         });
 
-        console.log(
-            "Archipeligo server started on port 3000"
+        Logger.info(
+            `Archipeligo server started on port ${port}.`
         );
     }
-    catch (error) {
+    catch (
+        error
+    ) {
 
-        fastify.log.error(
+        Logger.error(
+            "Server startup failed."
+        );
+
+        Logger.error(
             error
         );
 
-        process.exit(1);
+        process.exit(
+            1
+        );
     }
 }
 

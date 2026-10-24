@@ -2,39 +2,31 @@ import * as BABYLON
 from "@babylonjs/core";
 
 import type {
-    Planet
+    Planet,
+    Region
 }
 from "@archipeligo/shared";
 
+type Color =
+    [
+        number,
+        number,
+        number,
+        number
+    ];
+
 export class PlanetRenderer {
 
-    public render(
+    public static render(
+        scene: BABYLON.Scene,
         planet: Planet,
-        scene: BABYLON.Scene
-    ): BABYLON.Mesh {
+        renderMode: string
+    ): void {
 
         const mesh =
             new BABYLON.Mesh(
                 "planet",
                 scene
-            );
-
-        const colors =
-            this.createColours(
-                planet
-            );
-
-        const normals: number[] =
-            [];
-
-        BABYLON.VertexData
-            .ComputeNormals(
-
-                planet.mesh.vertices,
-
-                planet.mesh.indices,
-
-                normals
             );
 
         const vertexData =
@@ -46,11 +38,26 @@ export class PlanetRenderer {
         vertexData.indices =
             planet.mesh.indices;
 
+        const normals:
+            number[] = [];
+
+        BABYLON.VertexData.ComputeNormals(
+
+            vertexData.positions,
+
+            vertexData.indices,
+
+            normals
+        );
+
         vertexData.normals =
             normals;
 
         vertexData.colors =
-            colors;
+            this.buildColors(
+                planet,
+                renderMode
+            );
 
         vertexData.applyToMesh(
             mesh
@@ -58,36 +65,34 @@ export class PlanetRenderer {
 
         const material =
             new BABYLON.StandardMaterial(
-                "planet-material",
+
+                "planetMaterial",
+
                 scene
             );
-
-        material.backFaceCulling =
-            false;
 
         material.specularColor =
             BABYLON.Color3.Black();
 
-        material.disableLighting =
+        material.backFaceCulling =
             false;
 
         mesh.material =
             material;
-
-        return mesh;
     }
 
-    private createColours(
-        planet: Planet
+    private static buildColors(
+        planet: Planet,
+        renderMode: string
     ): number[] {
 
-        const colours: number[] =
-            [];
+        const colors:
+            number[] = [];
 
-        const regionColours =
+        const regionLookup =
             new Map<
                 string,
-                [number, number, number]
+                Region
             >();
 
         for (
@@ -95,13 +100,9 @@ export class PlanetRenderer {
             of planet.regions
         ) {
 
-            regionColours.set(
-
+            regionLookup.set(
                 region.id,
-
-                this.regionColour(
-                    region.id
-                )
+                region
             );
         }
 
@@ -110,79 +111,214 @@ export class PlanetRenderer {
             of planet.mesh.cells
         ) {
 
-            const colour =
-                regionColours.get(
+            const region =
+                regionLookup.get(
                     cell.regionId
-                )!;
+                );
 
-            colours.push(
+            if (!region) {
 
-                colour[0],
+                colors.push(
+                    1,
+                    0,
+                    1,
+                    1
+                );
 
-                colour[1],
+                continue;
+            }
 
-                colour[2],
+            const color =
+                this.getCellColor(
+                    region,
+                    renderMode
+                );
 
-                1
+            colors.push(
+                color[0],
+                color[1],
+                color[2],
+                color[3]
             );
         }
 
-        return colours;
+        return colors;
     }
 
-    private regionColour(
-        regionId: string
-    ): [number, number, number] {
+    private static getCellColor(
+        region: Region,
+        renderMode: string
+    ): Color {
 
-        let hash = 0;
+        switch (
+            renderMode
+        ) {
+
+            case "Temperature":
+
+                return this.temperatureColor(
+                    region.climate.temperature
+                );
+
+            case "Moisture":
+
+                return this.moistureColor(
+                    region.climate.moisture
+                );
+
+            case "Storms":
+
+                return this.stormColor(
+                    region.climate.stormActivity
+                );
+
+            case "Volcanism":
+
+                return this.volcanismColor(
+                    region.geology.volcanism
+                );
+
+            case "Resources":
+
+                return this.resourceColor(
+                    region.geology.resourceRichness
+                );
+
+            case "IslandDensity":
+
+                return this.islandColor(
+                    region.geology.islandDensity
+                );
+
+            default:
+
+                return this.regionColor(
+                    region.id
+                );
+        }
+    }
+
+    private static temperatureColor(
+        value: number
+    ): Color {
+
+        return [
+            value,
+            0,
+            1 - value,
+            1
+        ];
+    }
+
+    private static moistureColor(
+        value: number
+    ): Color {
+
+        return [
+            0,
+            value,
+            0,
+            1
+        ];
+    }
+
+    private static stormColor(
+        value: number
+    ): Color {
+
+        return [
+            value,
+            value,
+            0,
+            1
+        ];
+    }
+
+    private static volcanismColor(
+        value: number
+    ): Color {
+
+        return [
+            value,
+            value * 0.35,
+            0,
+            1
+        ];
+    }
+
+    private static resourceColor(
+        value: number
+    ): Color {
+
+        return [
+            value,
+            value,
+            value * 0.2,
+            1
+        ];
+    }
+
+    private static islandColor(
+        value: number
+    ): Color {
+
+        return [
+            0,
+            value,
+            value,
+            1
+        ];
+    }
+
+    private static regionColor(
+        regionId: string
+    ): Color {
+
+        const hash =
+            this.hash(
+                regionId
+            );
+
+        return [
+
+            (hash & 255) / 255,
+
+            ((hash >> 8) & 255) / 255,
+
+            ((hash >> 16) & 255) / 255,
+
+            1
+        ];
+    }
+
+    private static hash(
+        value: string
+    ): number {
+
+        let hash =
+            0;
 
         for (
-            const character
-            of regionId
+            let i = 0;
+            i < value.length;
+            i++
         ) {
 
             hash =
-
                 (
                     (hash << 5)
                     - hash
                 )
-
                 +
-
-                character.charCodeAt(
-                    0
+                value.charCodeAt(
+                    i
                 );
 
             hash |= 0;
         }
 
-        const r =
-            (
-                (
-                    hash >> 16
-                ) & 255
-            ) / 255;
-
-        const g =
-            (
-                (
-                    hash >> 8
-                ) & 255
-            ) / 255;
-
-        const b =
-            (
-                hash & 255
-            ) / 255;
-
-        return [
-
-            Math.abs(r),
-
-            Math.abs(g),
-
-            Math.abs(b)
-        ];
+        return Math.abs(
+            hash
+        );
     }
 }

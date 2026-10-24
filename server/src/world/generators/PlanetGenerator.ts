@@ -1,171 +1,122 @@
-import {
-    Planet,
-    PlanetMesh,
-    Region
+import type {
+    Planet
 }
 from "@archipeligo/shared";
 
-import { RegionGenerator }
-from "./RegionGenerator.js";
+import {
+    PlanetConstants
+}
+from "@archipeligo/shared";
 
-import { ClimateStage }
-from "./ClimateStage.js";
+import {
+    SeedService
+}
+from "../services/SeedService.js";
 
-import { IslandStage }
-from "./IslandStage.js";
-
-import { GenerationContext }
-from "../pipeline/GenerationContext.js";
-
-import { GenerationPipeline }
-from "../pipeline/GenerationPipeline.js";
-
-import { PlanetGeometryService }
+import {
+    PlanetGeometryService
+}
 from "../services/PlanetGeometryService.js";
 
-import { PlanetMeshService }
+import {
+    PlanetMeshService
+}
 from "../services/PlanetMeshService.js";
+
+import {
+    RegionGenerator
+}
+from "./RegionGenerator.js";
 
 export class PlanetGenerator {
 
+    private readonly seedService =
+        new SeedService();
+
     public generate(
-        seed: bigint,
-        regionCount = 64,
-        subdivisions = 5
+        masterSeed?: bigint
     ): Planet {
 
-        //
-        // Planet dimensions
-        //
+        const start =
+            performance.now();
 
-        const radiusKm =
-            this.generateRadius(
-                seed
+        const effectiveMasterSeed =
+            masterSeed ??
+            this.seedService.generateMasterSeed();
+
+        const planetSeed =
+            this.seedService.planetSeed(
+                effectiveMasterSeed
             );
 
-        //
-        // Regions
-        //
-
-        const regionGenerator =
-            new RegionGenerator();
-
-        const regions: Region[] =
-            regionGenerator.generate(
-                seed,
-                regionCount
-            );
-
-        //
-        // Geometry services
-        //
-
-        const geometry =
+        const geometryService =
             new PlanetGeometryService(
-                radiusKm
+                PlanetConstants.RadiusKm
+            );
+            
+        const regionGenerator =
+            new RegionGenerator(
+                this.seedService
             );
 
-        //
-        // Mesh
-        //
+        const regions =
+            regionGenerator.generate(
+                planetSeed,
+                PlanetConstants.RegionCount
+            );
 
         const meshService =
             new PlanetMeshService(
-                geometry
+                geometryService
             );
 
-        const mesh: PlanetMesh =
+        const mesh =
             meshService.generateMesh(
-                subdivisions,
+                PlanetConstants.Subdivisions,
                 regions
             );
 
-        //
-        // Base planet
-        //
+        const generationTimeMs =
+            performance.now() -
+            start;
 
-        const planet: Planet = {
+        console.log(
+
+            "\nPlanet Generation\n" +
+
+            "-----------------\n" +
+
+            `Seed: ${planetSeed}\n` +
+
+            `Radius: ${PlanetConstants.RadiusKm.toLocaleString()} km\n` +
+
+            `Subdivisions: ${PlanetConstants.Subdivisions}\n` +
+
+            `Regions: ${regions.length.toLocaleString()}\n` +
+
+            `Vertices: ${(mesh.vertices.length / 3).toLocaleString()}\n` +
+
+            `Triangles: ${(mesh.indices.length / 3).toLocaleString()}\n` +
+
+            `Cells: ${mesh.cells.length.toLocaleString()}\n` +
+
+            `Time: ${generationTimeMs.toFixed(2)} ms\n`
+        );
+
+        return {
 
             id:
-                `planet-${seed.toString(16)}`,
+                `planet-${planetSeed.toString(16)}`,
 
-            seed,
+            seed:
+                planetSeed,
 
-            radiusKm,
+            radiusKm:
+                PlanetConstants.RadiusKm,
 
             regions,
 
             mesh
         };
-
-        //
-        // Generation pipeline
-        //
-
-        const context:
-            GenerationContext = {
-
-            planet,
-
-            geometry
-        };
-
-        const pipeline =
-            new GenerationPipeline()
-
-                .addStage(
-                    new ClimateStage()
-                )
-
-                .addStage(
-                    new IslandStage()
-                );
-
-        pipeline.execute(
-            context
-        );
-
-        return planet;
-    }
-
-    private generateRadius(
-        seed: bigint
-    ): number {
-
-        const minimum =
-            5_000;
-
-        const maximum =
-            25_000;
-
-        return Math.round(
-
-            minimum +
-
-            this.nextNormalized(
-                seed
-            ) *
-
-            (
-                maximum -
-                minimum
-            )
-        );
-    }
-
-    private nextNormalized(
-        seed: bigint
-    ): number {
-
-        const value =
-            Number(
-                seed &
-                0xffffffffn
-            );
-
-        return (
-            value /
-            0xffffffff
-        );
     }
 }

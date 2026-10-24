@@ -1,11 +1,7 @@
-import {
-    SeedTree
-}
-from "@archipeligo/shared";
-
 export interface ISeedService {
 
-    generateMasterSeed(): bigint;
+    generateMasterSeed():
+        bigint;
 
     deriveSeed(
         parentSeed: bigint,
@@ -17,7 +13,17 @@ export interface ISeedService {
         entityId: string
     ): bigint;
 
-    createSeedTree(
+    planetSeed(
         masterSeed: bigint
-    ): SeedTree;
+    ): bigint;
+
+    regionSeed(
+        planetSeed: bigint,
+        regionId: number
+    ): bigint;
+
+    cellSeed(
+        planetSeed: bigint,
+        cellId: number
+    ): bigint;
 }

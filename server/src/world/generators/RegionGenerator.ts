@@ -1,227 +1,174 @@
 import {
-    Region,
     WorldPosition
-} from "@archipeligo/shared";
+}
+from "@archipeligo/shared";
+
+import type {
+    Region
+}
+from "@archipeligo/shared";
+
+import type {
+    ISeedService
+}
+from "../services/ISeedService.js";
 
 export class RegionGenerator {
 
+    constructor(
+        private readonly seedService:
+            ISeedService
+    ) {}
+
+private influence(
+    seed: bigint,
+    domain: string
+): number {
+
+    const derivedSeed =
+        this.seedService.deriveSeed(
+            seed,
+            domain
+        );
+
+    return this.nextNormalized(
+        derivedSeed
+    );
+}
+
     public generate(
-        seed: bigint,
+        planetSeed: bigint,
         regionCount: number
     ): Region[] {
 
-        const regions: Region[] = [];
-
-        let state = seed;
+        const regions:
+            Region[] = [];
 
         for (
-            let i = 0;
-            i < regionCount;
-            i++
+            let regionId = 0;
+            regionId < regionCount;
+            regionId++
         ) {
 
-            const regionSeed = state;
+            const regionSeed =
+                this.seedService.regionSeed(
+                    planetSeed,
+                    regionId
+                );
 
             regions.push({
 
-                id: `region-${i}`,
+                id:
+                    `region-${regionId}`,
 
-                name: `Region ${i}`,
+                name:
+                    `Region ${regionId}`,
 
-                seed: regionSeed,
+                seed:
+                    regionSeed,
 
-                site: this.generateFibonacciSite(
-                    i,
-                    regionCount,
-                    regionSeed
-                ),
+                site:
+                    this.generateSite(
+                        regionSeed
+                    ),
 
                 climate: {
 
                     temperature:
-                        this.nextNormalized(
-                            this.mix(regionSeed, 1)
+                        this.influence(
+                            regionSeed,
+                            "temperature"
                         ),
 
                     moisture:
-                        this.nextNormalized(
-                            this.mix(regionSeed, 2)
+                        this.influence(
+                            regionSeed,
+                            "moisture"
                         ),
 
                     stormActivity:
-                        this.nextNormalized(
-                            this.mix(regionSeed, 3)
+                        this.influence(
+                            regionSeed,
+                            "storms"
                         )
                 },
 
                 geology: {
 
                     volcanism:
-                        this.nextNormalized(
-                            this.mix(regionSeed, 4)
+                        this.influence(
+                            regionSeed,
+                            "volcanism"
                         ),
 
                     resourceRichness:
-                        this.nextNormalized(
-                            this.mix(regionSeed, 5)
+                        this.influence(
+                            regionSeed,
+                            "resources"
                         ),
 
                     islandDensity:
-                        this.nextNormalized(
-                            this.mix(regionSeed, 6)
+                        this.influence(
+                            regionSeed,
+                            "islands"
                         )
                 },
 
                 activity: {
 
                     ancientActivity:
-                        this.nextNormalized(
-                            this.mix(regionSeed, 7)
+                        this.influence(
+                            regionSeed,
+                            "ancients"
                         ),
 
                     anomalyActivity:
-                        this.nextNormalized(
-                            this.mix(regionSeed, 8)
+                        this.influence(
+                            regionSeed,
+                            "anomalies"
                         )
                 }
             });
-
-            state =
-                this.nextSeed(
-                    regionSeed
-                );
         }
 
         return regions;
     }
-
-    private generateFibonacciSite(
-        index: number,
-        total: number,
-        seed: bigint
+    
+    private generateSite(
+        regionSeed: bigint
     ): WorldPosition {
 
-        const goldenAngle =
-            Math.PI *
-            (
-                3 -
-                Math.sqrt(5)
+        const bearingSeed =
+            this.seedService.deriveSeed(
+                regionSeed,
+                "bearing"
             );
 
-        const y =
-            1 -
-            (
-                (index + 0.5)
-                * 2
-                / total
+        const elevationSeed =
+            this.seedService.deriveSeed(
+                regionSeed,
+                "elevation"
             );
 
-        const radius =
-            Math.sqrt(
-                1 -
-                (y * y)
-            );
-
-        const theta =
-            goldenAngle *
-            index;
-
-        const x =
-            Math.cos(theta) *
-            radius;
-
-        const z =
-            Math.sin(theta) *
-            radius;
-
-        let bearing =
-            Math.atan2(
-                z,
-                x
-            ) *
-            180 /
-            Math.PI;
-
-        if (bearing < 0) {
-
-            bearing += 360;
-        }
+        const bearing =
+            this.nextNormalized(
+                bearingSeed
+            ) * 360;
 
         const elevation =
-            Math.asin(y) *
-            180 /
-            Math.PI;
-
-        const maxJitterDegrees =
-            20 /
-            Math.sqrt(total);
-
-        const bearingJitter =
             (
                 this.nextNormalized(
-                    this.mix(
-                        seed,
-                        100
-                    )
-                ) - 0.5
-            ) *
-            (
-                maxJitterDegrees * 2
-            );
-
-        const elevationJitter =
-            (
-                this.nextNormalized(
-                    this.mix(
-                        seed,
-                        101
-                    )
-                ) - 0.5
-            ) *
-            (
-                maxJitterDegrees * 2
-            );
+                    elevationSeed
+                ) * 180
+            ) - 90;
 
         return new WorldPosition(
 
-            this.normalizeBearing(
-                bearing +
-                bearingJitter
-            ),
+            bearing,
 
-            Math.max(
-                -90,
-                Math.min(
-                    90,
-                    elevation +
-                    elevationJitter
-                )
-            )
-        );
-    }
+            elevation,
 
-    private nextSeed(
-        seed: bigint
-    ): bigint {
-
-        return (
-            seed *
-            6364136223846793005n +
-            1442695040888963407n
-        );
-    }
-
-    private mix(
-        seed: bigint,
-        salt: number
-    ): bigint {
-
-        return (
-            seed ^
-            (
-                BigInt(salt) *
-                0x9E3779B97F4A7C15n
-            )
+            0
         );
     }
 
@@ -232,23 +179,14 @@ export class RegionGenerator {
         const value =
             Number(
                 seed &
-                0xffffffffn
+                BigInt(
+                    0xffffffff
+                )
             );
 
         return (
             value /
             0xffffffff
         );
-    }
-
-    private normalizeBearing(
-        bearing: number
-    ): number {
-
-        return (
-            (
-                bearing % 360
-            ) + 360
-        ) % 360;
     }
 }

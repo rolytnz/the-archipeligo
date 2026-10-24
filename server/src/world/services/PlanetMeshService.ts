@@ -1,9 +1,10 @@
-import {
+import type {
     PlanetCell,
     PlanetMesh,
     Region,
     Vector3
-} from "@archipeligo/shared";
+}
+from "@archipeligo/shared";
 
 import { PlanetGeometryService }
 from "./PlanetGeometryService.js";
@@ -15,6 +16,13 @@ interface Triangle {
     b: number;
 
     c: number;
+}
+
+interface Icosphere {
+
+    vertices: Vector3[];
+
+    faces: Triangle[];
 }
 
 export class PlanetMeshService {
@@ -34,11 +42,41 @@ export class PlanetMeshService {
                 subdivisions
             );
 
-        const vertices: number[] =
-            [];
+        const adjacency =
+            new Map<
+                number,
+                Set<number>
+            >();
 
-        const cells: PlanetCell[] =
-            [];
+        for (
+            const face
+            of sphere.faces
+        ) {
+
+            this.link(
+                adjacency,
+                face.a,
+                face.b
+            );
+
+            this.link(
+                adjacency,
+                face.b,
+                face.c
+            );
+
+            this.link(
+                adjacency,
+                face.c,
+                face.a
+            );
+        }
+
+        const vertices:
+            number[] = [];
+
+        const cells:
+            PlanetCell[] = [];
 
         for (
             let i = 0;
@@ -80,31 +118,22 @@ export class PlanetMeshService {
                 regionId:
                     region.id,
 
-                islandId:
-                    undefined,
+                isLand: false,
 
-                isLand:
-                    false,
+                elevationM: 0,
 
-                elevationM:
-                    0,
+                temperature: 0,
 
-                temperature:
-                    0,
+                moisture: 0,
 
-                moisture:
-                    0,
+                stormActivity: 0,
 
-                stormActivity:
-                    0,
-
-                resourceIds:
-                    []
+                resourceIds: []
             });
         }
 
-        const indices: number[] =
-            [];
+        const indices:
+            number[] = [];
 
         for (
             const face
@@ -121,244 +150,370 @@ export class PlanetMeshService {
             );
         }
 
+        const neighbors =
+            new Int32Array(
+                cells.length * 6
+            );
+
+        neighbors.fill(-1);
+
+        for (
+            let cellId = 0;
+            cellId < cells.length;
+            cellId++
+        ) {
+
+            const adjacent =
+                Array.from(
+
+                    adjacency.get(
+                        cellId
+                    ) ?? []
+                );
+
+            const offset =
+                cellId * 6;
+
+            for (
+                let i = 0;
+                i < adjacent.length &&
+                i < 6;
+                i++
+            ) {
+
+                neighbors[
+                    offset + i
+                ] =
+                    adjacent[i];
+            }
+        }
+
         return {
 
             vertices,
 
             indices,
 
-            cells
+            cells,
+
+            neighbors
         };
     }
 
-    private generateIcosphere(
-        subdivisions: number
-    ): {
+    private link(
+        adjacency: Map<
+            number,
+            Set<number>
+        >,
+        a: number,
+        b: number
+    ): void {
 
-        vertices: Vector3[];
+        let aSet =
+            adjacency.get(a);
 
-        faces: Triangle[];
-    } {
+        if (!aSet) {
 
-        const t =
-            (
-                1 +
-                Math.sqrt(5)
-            ) / 2;
+            aSet =
+                new Set<number>();
 
-        const vertices: Vector3[] = [
+            adjacency.set(
+                a,
+                aSet
+            );
+        }
 
-            { x: -1, y:  t, z:  0 },
-            { x:  1, y:  t, z:  0 },
-            { x: -1, y: -t, z:  0 },
-            { x:  1, y: -t, z:  0 },
+        aSet.add(b);
 
-            { x:  0, y: -1, z:  t },
-            { x:  0, y:  1, z:  t },
-            { x:  0, y: -1, z: -t },
-            { x:  0, y:  1, z: -t },
+        let bSet =
+            adjacency.get(b);
 
-            { x:  t, y:  0, z: -1 },
-            { x:  t, y:  0, z:  1 },
-            { x: -t, y:  0, z: -1 },
-            { x: -t, y:  0, z:  1 }
+        if (!bSet) {
 
-        ].map(
-            vertex =>
-                this.normalize(
-                    vertex
-                )
-        );
+            bSet =
+                new Set<number>();
 
-        let faces: Triangle[] = [
+            adjacency.set(
+                b,
+                bSet
+            );
+        }
 
-            { a: 0, b: 11, c: 5 },
-            { a: 0, b: 5, c: 1 },
-            { a: 0, b: 1, c: 7 },
-            { a: 0, b: 7, c: 10 },
-            { a: 0, b: 10, c: 11 },
+        bSet.add(a);
+    }
 
-            { a: 1, b: 5, c: 9 },
-            { a: 5, b: 11, c: 4 },
-            { a: 11, b: 10, c: 2 },
-            { a: 10, b: 7, c: 6 },
-            { a: 7, b: 1, c: 8 },
+    public getNeighbors(
+        mesh: PlanetMesh,
+        cellId: number
+    ): number[] {
 
-            { a: 3, b: 9, c: 4 },
-            { a: 3, b: 4, c: 2 },
-            { a: 3, b: 2, c: 6 },
-            { a: 3, b: 6, c: 8 },
-            { a: 3, b: 8, c: 9 },
+        const result:
+            number[] = [];
 
-            { a: 4, b: 9, c: 5 },
-            { a: 2, b: 4, c: 11 },
-            { a: 6, b: 2, c: 10 },
-            { a: 8, b: 6, c: 7 },
-            { a: 9, b: 8, c: 1 }
-        ];
+        const offset =
+            cellId * 6;
 
         for (
             let i = 0;
-            i < subdivisions;
+            i < 6;
             i++
         ) {
 
-            const cache =
-                new Map<
-                    string,
-                    number
-                >();
+            const value =
+                mesh.neighbors[
+                    offset + i
+                ];
 
-            const newFaces:
-                Triangle[] = [];
+            if (value >= 0) {
 
-            for (
-                const face of faces
-            ) {
-
-                const ab =
-                    this.getMidpoint(
-                        face.a,
-                        face.b,
-                        vertices,
-                        cache
-                    );
-
-                const bc =
-                    this.getMidpoint(
-                        face.b,
-                        face.c,
-                        vertices,
-                        cache
-                    );
-
-                const ca =
-                    this.getMidpoint(
-                        face.c,
-                        face.a,
-                        vertices,
-                        cache
-                    );
-
-                newFaces.push(
-
-                    {
-                        a: face.a,
-                        b: ab,
-                        c: ca
-                    },
-
-                    {
-                        a: face.b,
-                        b: bc,
-                        c: ab
-                    },
-
-                    {
-                        a: face.c,
-                        b: ca,
-                        c: bc
-                    },
-
-                    {
-                        a: ab,
-                        b: bc,
-                        c: ca
-                    }
+                result.push(
+                    value
                 );
             }
-
-            faces =
-                newFaces;
         }
 
-        return {
-
-            vertices,
-
-            faces
-        };
+        return result;
     }
 
-    private getMidpoint(
-        a: number,
-        b: number,
-        vertices: Vector3[],
-        cache: Map<string, number>
-    ): number {
+private generateIcosphere(
+    subdivisions: number
+): Icosphere {
 
-        const key =
-            a < b
-                ? `${a}:${b}`
-                : `${b}:${a}`;
+    const t =
+        (1 + Math.sqrt(5)) / 2;
 
-        const cached =
-            cache.get(key);
+    const vertices:
+        Vector3[] = [
 
-        if (cached !== undefined) {
+        this.normalize({ x: -1, y:  t, z:  0 }),
+        this.normalize({ x:  1, y:  t, z:  0 }),
+        this.normalize({ x: -1, y: -t, z:  0 }),
+        this.normalize({ x:  1, y: -t, z:  0 }),
 
-            return cached;
+        this.normalize({ x:  0, y: -1, z:  t }),
+        this.normalize({ x:  0, y:  1, z:  t }),
+        this.normalize({ x:  0, y: -1, z: -t }),
+        this.normalize({ x:  0, y:  1, z: -t }),
+
+        this.normalize({ x:  t, y:  0, z: -1 }),
+        this.normalize({ x:  t, y:  0, z:  1 }),
+        this.normalize({ x: -t, y:  0, z: -1 }),
+        this.normalize({ x: -t, y:  0, z:  1 })
+    ];
+
+    let faces:
+        Triangle[] = [
+
+        { a: 0,  b: 11, c: 5 },
+        { a: 0,  b: 5,  c: 1 },
+        { a: 0,  b: 1,  c: 7 },
+        { a: 0,  b: 7,  c: 10 },
+        { a: 0,  b: 10, c: 11 },
+
+        { a: 1,  b: 5,  c: 9 },
+        { a: 5,  b: 11, c: 4 },
+        { a: 11, b: 10, c: 2 },
+        { a: 10, b: 7,  c: 6 },
+        { a: 7,  b: 1,  c: 8 },
+
+        { a: 3,  b: 9,  c: 4 },
+        { a: 3,  b: 4,  c: 2 },
+        { a: 3,  b: 2,  c: 6 },
+        { a: 3,  b: 6,  c: 8 },
+        { a: 3,  b: 8,  c: 9 },
+
+        { a: 4,  b: 9,  c: 5 },
+        { a: 2,  b: 4,  c: 11 },
+        { a: 6,  b: 2,  c: 10 },
+        { a: 8,  b: 6,  c: 7 },
+        { a: 9,  b: 8,  c: 1 }
+    ];
+
+    for (
+        let i = 0;
+        i < subdivisions;
+        i++
+    ) {
+
+        const midpointCache =
+            new Map<
+                string,
+                number
+            >();
+
+        const newFaces:
+            Triangle[] = [];
+
+        for (
+            const face
+            of faces
+        ) {
+
+            const ab =
+                this.getMidpoint(
+                    face.a,
+                    face.b,
+                    vertices,
+                    midpointCache
+                );
+
+            const bc =
+                this.getMidpoint(
+                    face.b,
+                    face.c,
+                    vertices,
+                    midpointCache
+                );
+
+            const ca =
+                this.getMidpoint(
+                    face.c,
+                    face.a,
+                    vertices,
+                    midpointCache
+                );
+
+            newFaces.push(
+
+                {
+                    a: face.a,
+                    b: ab,
+                    c: ca
+                },
+
+                {
+                    a: face.b,
+                    b: bc,
+                    c: ab
+                },
+
+                {
+                    a: face.c,
+                    b: ca,
+                    c: bc
+                },
+
+                {
+                    a: ab,
+                    b: bc,
+                    c: ca
+                }
+            );
         }
 
-        const midpoint =
-            this.normalize({
+        faces =
+            newFaces;
+    }
 
-                x:
-                    (
-                        vertices[a].x +
-                        vertices[b].x
-                    ) / 2,
+    return {
 
-                y:
-                    (
-                        vertices[a].y +
-                        vertices[b].y
-                    ) / 2,
+        vertices,
 
-                z:
-                    (
-                        vertices[a].z +
-                        vertices[b].z
-                    ) / 2
-            });
+        faces
+    };
+}
 
-        const index =
-            vertices.push(
-                midpoint
-            ) - 1;
+private getMidpoint(
+    a: number,
+    b: number,
+    vertices: Vector3[],
+    cache: Map<
+        string,
+        number
+    >
+): number {
 
-        cache.set(
-            key,
-            index
+    const smaller =
+        Math.min(
+            a,
+            b
         );
 
-        return index;
+    const larger =
+        Math.max(
+            a,
+            b
+        );
+
+    const key =
+        `${smaller}:${larger}`;
+
+    const cached =
+        cache.get(
+            key
+        );
+
+    if (
+        cached !==
+        undefined
+    ) {
+
+        return cached;
     }
 
-    private normalize(
-        vector: Vector3
-    ): Vector3 {
+    const v1 =
+        vertices[a];
 
-        const length =
-            Math.sqrt(
+    const v2 =
+        vertices[b];
 
-                vector.x * vector.x +
-
-                vector.y * vector.y +
-
-                vector.z * vector.z
-            );
-
-        return {
+    const midpoint =
+        this.normalize({
 
             x:
-                vector.x / length,
+                (v1.x + v2.x) / 2,
 
             y:
-                vector.y / length,
+                (v1.y + v2.y) / 2,
 
             z:
-                vector.z / length
-        };
-    }
+                (v1.z + v2.z) / 2
+        });
+
+    const index =
+        vertices.length;
+
+    vertices.push(
+        midpoint
+    );
+
+    cache.set(
+        key,
+        index
+    );
+
+    return index;
+}
+private normalize(
+    vector: Vector3
+): Vector3 {
+
+    const length =
+        Math.sqrt(
+
+            vector.x *
+            vector.x +
+
+            vector.y *
+            vector.y +
+
+            vector.z *
+            vector.z
+        );
+
+    return {
+
+        x:
+            vector.x /
+            length,
+
+        y:
+            vector.y /
+            length,
+
+        z:
+            vector.z /
+            length
+    };
+}
 }

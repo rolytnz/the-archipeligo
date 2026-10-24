@@ -4,7 +4,7 @@ import {
 
 import {
     PlanetGenerator
-} from "./PlanetGenerator.js";
+} from "./generators/PlanetGenerator.js";
 
 export class PlanetGeneratorImpl {
 

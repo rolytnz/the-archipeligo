@@ -1,20 +1,25 @@
-import * as crypto from "crypto";
-
-import { ISeedService } from "./ISeedService.js";
+import * as crypto
+from "crypto";
 
 import {
-    SeedTree
+    ISeedService
 }
-from "@archipeligo/shared";
+from "./ISeedService.js";
 
-export class SeedService implements ISeedService {
+export class SeedService
+implements ISeedService {
 
-    public generateMasterSeed(): bigint {
+    public generateMasterSeed():
+        bigint {
 
-        const bytes = crypto.randomBytes(8);
+        const bytes =
+            crypto.randomBytes(8);
 
         return BigInt(
-            "0x" + bytes.toString("hex")
+            "0x" +
+            bytes.toString(
+                "hex"
+            )
         );
     }
 
@@ -23,15 +28,24 @@ export class SeedService implements ISeedService {
         domain: string
     ): bigint {
 
-        const hash = crypto
-            .createHash("sha256")
-            .update(
-                `${parentSeed}:${domain}`
-            )
-            .digest("hex");
+        const hash =
+            crypto
+                .createHash(
+                    "sha256"
+                )
+                .update(
+                    `${parentSeed}:${domain}`
+                )
+                .digest(
+                    "hex"
+                );
 
         return BigInt(
-            "0x" + hash.substring(0, 16)
+            "0x" +
+            hash.substring(
+                0,
+                16
+            )
         );
     }
 
@@ -40,91 +54,41 @@ export class SeedService implements ISeedService {
         entityId: string
     ): bigint {
 
-        const hash = crypto
-            .createHash("sha256")
-            .update(
-                `${parentSeed}:${entityId}`
-            )
-            .digest("hex");
-
-        return BigInt(
-            "0x" + hash.substring(0, 16)
+        return this.deriveSeed(
+            parentSeed,
+            entityId
         );
     }
 
-    public createSeedTree(
+    public planetSeed(
         masterSeed: bigint
-    ): SeedTree {
+    ): bigint {
 
-        return {
-
+        return this.deriveSeed(
             masterSeed,
+            "planet"
+        );
+    }
 
-            climateSeed:
-                this.deriveSeed(
-                    masterSeed,
-                    "climate"
-                ),
+    public regionSeed(
+        planetSeed: bigint,
+        regionId: number
+    ): bigint {
 
-            tectonicSeed:
-                this.deriveSeed(
-                    masterSeed,
-                    "tectonics"
-                ),
+        return this.deriveSeed(
+            planetSeed,
+            `region:${regionId}`
+        );
+    }
 
-            oceanSeed:
-                this.deriveSeed(
-                    masterSeed,
-                    "ocean"
-                ),
+    public cellSeed(
+        planetSeed: bigint,
+        cellId: number
+    ): bigint {
 
-            weatherSeed:
-                this.deriveSeed(
-                    masterSeed,
-                    "weather"
-                ),
-
-            regionSeed:
-                this.deriveSeed(
-                    masterSeed,
-                    "regions"
-                ),
-
-            islandSeed:
-                this.deriveSeed(
-                    masterSeed,
-                    "islands"
-                ),
-
-            resourceSeed:
-                this.deriveSeed(
-                    masterSeed,
-                    "resources"
-                ),
-
-            ruinSeed:
-                this.deriveSeed(
-                    masterSeed,
-                    "ruins"
-                ),
-
-            factionSeed:
-                this.deriveSeed(
-                    masterSeed,
-                    "factions"
-                ),
-
-            wildlifeSeed:
-                this.deriveSeed(
-                    masterSeed,
-                    "wildlife"
-                ),
-
-            driftSeed:
-                this.deriveSeed(
-                    masterSeed,
-                    "drift"
-                )
-        };
+        return this.deriveSeed(
+            planetSeed,
+            `cell:${cellId}`
+        );
     }
 }

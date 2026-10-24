@@ -8,4 +8,6 @@ export interface PlanetMesh {
     indices: number[];
 
     cells: PlanetCell[];
+
+    neighbors: Int32Array;
 }

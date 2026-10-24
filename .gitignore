@@ -6,3 +6,12 @@ dist/
 
 # Ignore dependency folders
 node_modules/
+
+#ignore text file for manual error logging
+.err.txt
+
+#ignore backlog of ideas
+docs/backlog.txt
+
+#ignore database config
+server/.env

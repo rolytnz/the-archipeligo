@@ -11,10 +11,16 @@ import {
 }
 from "../renderers/PlanetRenderer.js";
 
+import type {
+    RenderMode
+}
+from "../renderers/RenderMode.js";
+
 export function createScene(
     engine: BABYLON.Engine,
     canvas: HTMLCanvasElement,
-    planet: Planet
+    planet: Planet,
+    renderMode: RenderMode
 ): BABYLON.Scene {
 
     const scene =
@@ -24,9 +30,9 @@ export function createScene(
 
     scene.clearColor =
         new BABYLON.Color4(
-            0.02,
-            0.02,
             0.05,
+            0.07,
+            0.10,
             1
         );
 
@@ -35,9 +41,9 @@ export function createScene(
 
             "camera",
 
-            0,
+            -Math.PI / 2,
 
-            Math.PI / 2.5,
+            Math.PI / 2.8,
 
             3,
 
@@ -46,24 +52,30 @@ export function createScene(
             scene
         );
 
-    camera.lowerRadiusLimit =
-        1.5;
-
-    camera.upperRadiusLimit =
-        10;
-
     camera.attachControl(
         canvas,
         true
     );
 
+    camera.wheelDeltaPercentage =
+        0.001;
+
+    camera.lowerRadiusLimit =
+        1.2;
+
+    camera.upperRadiusLimit =
+        10;
+
+    camera.panningSensibility =
+        0;
+
     const hemisphericLight =
         new BABYLON.HemisphericLight(
 
-            "hemi",
+            "hemisphericLight",
 
             new BABYLON.Vector3(
-                0,
+                1,
                 1,
                 0
             ),
@@ -72,7 +84,7 @@ export function createScene(
         );
 
     hemisphericLight.intensity =
-        1.0;
+        0.8;
 
     const directionalLight =
         new BABYLON.DirectionalLight(
@@ -82,30 +94,40 @@ export function createScene(
             new BABYLON.Vector3(
                 -1,
                 -1,
-                -1
+                -0.5
             ),
 
             scene
         );
 
     directionalLight.intensity =
-        0.5;
+        1.2;
 
-    const renderer =
-        new PlanetRenderer();
+    PlanetRenderer.render(
 
-    const planetMesh =
-        renderer.render(
-            planet,
-            scene
-        );
+        scene,
+
+        planet,
+
+        renderMode
+    );
 
     scene.onBeforeRenderObservable
-        .add(() => {
+        .add(
+            () => {
 
-            planetMesh.rotation.y +=
-                0.001;
-        });
+                const mesh =
+                    scene.getMeshByName(
+                        "planet"
+                    );
+
+                if (mesh) {
+
+                    mesh.rotation.y +=
+                        0.0005;
+                }
+            }
+        );
 
     return scene;
 }
