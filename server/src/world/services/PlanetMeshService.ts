@@ -109,27 +109,15 @@ export class PlanetMeshService {
                         regions
                     );
 
-            cells.push({
+                cells.push({
 
-                id: i,
+                    id: i,
 
-                center,
+                    center,
 
-                regionId:
-                    region.id,
-
-                isLand: false,
-
-                elevationM: 0,
-
-                temperature: 0,
-
-                moisture: 0,
-
-                stormActivity: 0,
-
-                resourceIds: []
-            });
+                    regionId:
+                        region.id,
+                });
         }
 
         const indices:

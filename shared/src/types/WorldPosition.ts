@@ -1,36 +1,22 @@
 export class WorldPosition {
 
-    /**
-     * Longitude equivalent.
-     *
-     * Range:
-     * 0 <= bearing < 360
-     */
-    public readonly bearing: number;
+    constructor(
 
-    /**
-     * Latitude equivalent.
-     *
-     * Range:
-     * -90 <= elevation <= 90
-     */
-    public readonly elevation: number;
+        public readonly bearing:
+            number,
 
-    /**
-     * Height above sea level.
-     */
-    public readonly altitudeKm: number;
+        public readonly elevation:
+            number,
 
-    public constructor(
-        bearing: number,
-        elevation: number,
-        altitudeKm = 0
+        public readonly altitudeKm:
+            number
     ) {
 
         if (
             bearing < 0 ||
             bearing >= 360
         ) {
+
             throw new Error(
                 `Invalid bearing: ${bearing}`
             );
@@ -40,42 +26,181 @@ export class WorldPosition {
             elevation < -90 ||
             elevation > 90
         ) {
+
             throw new Error(
                 `Invalid elevation: ${elevation}`
             );
         }
-
-        this.bearing = bearing;
-        this.elevation = elevation;
-        this.altitudeKm = altitudeKm;
     }
 
-    public equals(
-        other: WorldPosition
-    ): boolean {
+    public toCartesian(): {
+        x: number;
+        y: number;
+        z: number;
+    } {
 
-        return (
-            this.bearing === other.bearing &&
-            this.elevation === other.elevation &&
-            this.altitudeKm === other.altitudeKm
-        );
-    }
+        const latitude =
+            this.elevation *
+            Math.PI /
+            180;
 
-    public toJSON(): object {
+        const longitude =
+            this.bearing *
+            Math.PI /
+            180;
 
         return {
-            bearing: this.bearing,
-            elevation: this.elevation,
-            altitudeKm: this.altitudeKm
+
+            x:
+                Math.cos(
+                    latitude
+                ) *
+                Math.cos(
+                    longitude
+                ),
+
+            y:
+                Math.cos(
+                    latitude
+                ) *
+                Math.sin(
+                    longitude
+                ),
+
+            z:
+                Math.sin(
+                    latitude
+                )
         };
     }
 
-    public toString(): string {
+    public angularDistanceTo(
+        other: WorldPosition
+    ): number {
+
+        const lat1 =
+            this.elevation *
+            Math.PI /
+            180;
+
+        const lat2 =
+            other.elevation *
+            Math.PI /
+            180;
+
+        const lon1 =
+            this.bearing *
+            Math.PI /
+            180;
+
+        const lon2 =
+            other.bearing *
+            Math.PI /
+            180;
+
+        const cosAngle =
+
+            Math.sin(
+                lat1
+            ) *
+            Math.sin(
+                lat2
+            )
+
+            +
+
+            Math.cos(
+                lat1
+            ) *
+            Math.cos(
+                lat2
+            ) *
+            Math.cos(
+                lon1 - lon2
+            );
+
+        const angle =
+            Math.acos(
+
+                Math.max(
+                    -1,
+                    Math.min(
+                        1,
+                        cosAngle
+                    )
+                )
+            );
 
         return (
-            `[${this.bearing.toFixed(2)}°, ` +
-            `${this.elevation.toFixed(2)}°, ` +
-            `${this.altitudeKm.toFixed(2)}km]`
+            angle *
+            180
+        ) / Math.PI;
+    }
+
+    public static fromCartesian(
+        x: number,
+        y: number,
+        z: number
+    ): WorldPosition {
+
+        const length =
+            Math.sqrt(
+
+                x * x +
+
+                y * y +
+
+                z * z
+            );
+
+        x /= length;
+        y /= length;
+        z /= length;
+
+        const latitude =
+            Math.asin(
+                z
+            ) *
+            180 /
+            Math.PI;
+
+        let longitude =
+            Math.atan2(
+                y,
+                x
+            ) *
+            180 /
+            Math.PI;
+
+        longitude =
+            WorldPosition
+                .normalizeBearing(
+                    longitude
+                );
+
+        return new WorldPosition(
+
+            longitude,
+
+            latitude,
+
+            0
         );
+    }
+
+    private static normalizeBearing(
+        bearing: number
+    ): number {
+
+        bearing %= 360;
+
+        if (
+            bearing < 0
+        ) {
+
+            bearing += 360;
+        }
+
+        return bearing;
     }
 }

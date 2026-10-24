@@ -2,7 +2,8 @@ import * as BABYLON
 from "@babylonjs/core";
 
 import type {
-    Planet
+    Planet,
+    PlanetSummary
 }
 from "@archipeligo/shared";
 
@@ -23,6 +24,16 @@ const canvas =
     document.getElementById(
         "renderCanvas"
     ) as HTMLCanvasElement;
+
+const planetSelect =
+    document.getElementById(
+        "planetSelect"
+    ) as HTMLSelectElement;
+
+const loadPlanetButton =
+    document.getElementById(
+        "loadPlanetButton"
+    ) as HTMLButtonElement;
 
 const generatePlanetButton =
     document.getElementById(
@@ -126,24 +137,73 @@ function updateStats():
     stats.textContent =
 
         `Planet ID:
-${currentPlanet.id}
+        ${currentPlanet.id}
 
-Regions:
-${currentPlanet.regions.length.toLocaleString()}
+        Regions:
+        ${currentPlanet.regions.length.toLocaleString()}
 
-Cells:
-${currentPlanet.mesh.cells.length.toLocaleString()}
+        Cells:
+        ${currentPlanet.mesh.cells.length.toLocaleString()}
 
-Triangles:
-${(
-    currentPlanet.mesh.indices.length /
-    3
-).toLocaleString()}
+        Triangles:
+        ${(
+            currentPlanet.mesh.indices.length /
+            3
+        ).toLocaleString()}
 
-Render Mode:
-${getRenderModeLabel(
-    getRenderMode()
-)}`;
+        Render Mode:
+        ${getRenderModeLabel(
+            getRenderMode()
+        )}`;
+}
+
+async function refreshPlanetList():
+    Promise<void> {
+
+    const response =
+        await fetch(
+            "/api/planets"
+        );
+
+    if (
+        !response.ok
+    ) {
+
+        throw new Error(
+            "Failed to load planet list."
+        );
+    }
+
+    const planets:
+        PlanetSummary[] =
+            await response.json();
+
+    planetSelect.innerHTML =
+        "";
+
+    for (
+        const planet
+        of planets
+    ) {
+
+        const option =
+            document.createElement(
+                "option"
+            );
+
+        option.value =
+            planet.id;
+
+        option.textContent =
+
+            `${planet.id.substring(0, 8)}
+            | ${planet.regionCount} regions
+            | ${new Date(planet.createdAt).toLocaleString()}`;
+
+        planetSelect.appendChild(
+            option
+        );
+    }
 }
 
 async function generatePlanet():
@@ -214,6 +274,72 @@ async function generatePlanet():
 
             `Generation failed:
 
+        ${
+            error instanceof Error
+                ? error.message
+                : String(error)
+        }`;
+    }
+    await refreshPlanetList();
+    updateStats();
+}
+
+async function loadPlanet():
+    Promise<void> {
+
+    try {
+
+        const planetId =
+            planetSelect.value;
+
+        if (
+            !planetId
+        ) {
+
+            throw new Error(
+                "No planet selected."
+            );
+        }
+
+        stats.textContent =
+            "Loading planet...";
+
+        const response =
+            await fetch(
+                `/api/planet/${planetId}`
+            );
+
+        if (
+            !response.ok
+        ) {
+
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
+
+        const result =
+            await response.json();
+
+        currentPlanet =
+            result.planet;
+
+        rebuildScene();
+
+        updateStats();
+    }
+    catch (
+        error
+    ) {
+
+        console.error(
+            error
+        );
+
+        stats.textContent =
+
+            `Load failed:
+
 ${
     error instanceof Error
         ? error.message
@@ -229,6 +355,16 @@ generatePlanetButton.addEventListener(
     () => {
 
         void generatePlanet();
+    }
+);
+
+loadPlanetButton.addEventListener(
+
+    "click",
+
+    () => {
+
+        void loadPlanet();
     }
 );
 
@@ -268,3 +404,5 @@ window.addEventListener(
         engine.resize();
     }
 );
+
+void refreshPlanetList();

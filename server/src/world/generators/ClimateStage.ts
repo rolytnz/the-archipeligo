@@ -4,6 +4,11 @@ from "../pipeline/GenerationStage.js";
 import { GenerationContext }
 from "../pipeline/GenerationContext.js";
 
+import {
+    Logger
+}
+from "../../infrastructure/logging/Logger.js";
+
 export class ClimateStage
     implements GenerationStage {
 
@@ -14,44 +19,14 @@ export class ClimateStage
         context: GenerationContext
     ): void {
 
-        const regionLookup =
-            new Map(
-                context.planet.regions.map(
-                    region => [
-                        region.id,
-                        region
-                    ]
-                )
-            );
+        Logger.info(
+            "Applying regional climate..."
+        );
 
         for (
-            const cell
-            of context.planet.mesh.cells
+            const region
+            of context.planet.regions
         ) {
-
-            const region =
-                regionLookup.get(
-                    cell.regionId
-                );
-
-            if (!region) {
-
-                continue;
-            }
-
-            //
-            // Base climate inherited
-            // from owning region.
-            //
-
-            let temperature =
-                region.climate.temperature;
-
-            let moisture =
-                region.climate.moisture;
-
-            const stormActivity =
-                region.climate.stormActivity;
 
             //
             // Latitude adjustment.
@@ -64,31 +39,22 @@ export class ClimateStage
                 1 -
                 (
                     Math.abs(
-                        cell.center.elevation
+                        region.site.elevation
                     ) / 90
                 );
 
-            temperature *=
+            region.climate.temperature *=
                 latitudeFactor;
 
-            moisture *=
+            region.climate.moisture *=
                 (
                     0.5 +
                     latitudeFactor * 0.5
                 );
-
-            cell.temperature =
-                temperature;
-
-            cell.moisture =
-                moisture;
-
-            cell.stormActivity =
-                stormActivity;
         }
 
-        console.log(
-            `Applied climate to ${context.planet.mesh.cells.length} cells.`
+        Logger.info(
+            `Applied climate to ${context.planet.regions.length.toLocaleString()} regions.`
         );
     }
 }

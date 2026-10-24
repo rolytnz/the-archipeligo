@@ -1,10 +1,12 @@
 import {
     Planet
-} from "@archipeligo/shared";
+}
+from "@archipeligo/shared";
 
 import {
     PlanetGeometryService
-} from "../services/PlanetGeometryService.js";
+}
+from "../services/PlanetGeometryService.js";
 
 export interface GenerationContext {
 

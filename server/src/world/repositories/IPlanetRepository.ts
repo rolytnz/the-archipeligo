@@ -1,12 +1,10 @@
 import type {
-    Planet
+    Planet,
+    PlanetSummary,
+    PlanetLoadRequest,
+    PlanetLoadResult
 }
 from "@archipeligo/shared";
-
-import type {
-    PlanetSummary
-}
-from "./PlanetSummary.js";
 
 export interface IPlanetRepository {
 
@@ -15,9 +13,9 @@ export interface IPlanetRepository {
     ): Promise<void>;
 
     load(
-        planetId: string
+        request: PlanetLoadRequest
     ): Promise<
-        Planet | null
+        PlanetLoadResult | null
     >;
 
     exists(

@@ -27,6 +27,27 @@ import {
 }
 from "./infrastructure/logging/Logger.js";
 
+function serializeForJson(
+    value: unknown
+): unknown {
+
+    return JSON.parse(
+        JSON.stringify(
+            value,
+            (
+                _key,
+                item
+            ) =>
+                typeof item ===
+                "bigint"
+
+                    ? item.toString()
+
+                    : item
+        )
+    );
+}
+
 const fastify =
     Fastify({
 
@@ -147,7 +168,12 @@ fastify.get(
 
         try {
 
-            return await repository.list();
+            const planets =
+                await repository.list();
+
+            return serializeForJson(
+                planets
+            );
         }
         catch (
             error
@@ -165,10 +191,79 @@ fastify.get(
                 .status(500)
                 .send({
 
-                    success: false,
-
                     message:
                         "Failed to list planets."
+                });
+        }
+    }
+);
+
+fastify.get(
+    "/api/planet/:id",
+    async (
+        request,
+        reply
+    ) => {
+
+        try {
+
+            const {
+                id
+            } =
+                request.params as {
+
+                    id: string;
+                };
+
+            const result =
+                await repository.load({
+
+                    planetId: id,
+
+                    metadata: true,
+
+                    regions: true,
+
+                    cells: true,
+
+                    mesh: true
+                });
+
+            if (
+                !result
+            ) {
+
+                return reply
+                    .status(404)
+                    .send({
+
+                        message:
+                            "Planet not found."
+                    });
+            }
+
+            return serializeForJson(
+                result
+            );
+        }
+        catch (
+            error
+        ) {
+
+            Logger.error(
+                "Failed to load planet."
+            );
+
+            Logger.error(
+                error
+            );
+
+            return reply
+                .status(500)
+                .send({
+
+                    message:
+                        "Failed to load planet."
                 });
         }
     }

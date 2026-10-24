@@ -1,54 +1,29 @@
-import { WorldPosition }
+import {
+    WorldPosition
+}
 from "./WorldPosition.js";
 
 export interface PlanetCell {
 
     /**
      * Unique cell identifier.
+     *
+     * Corresponds to the cell's index
+     * within PlanetMesh.cells.
      */
     id: number;
 
     /**
-     * Centre point of the cell.
-     */
-    center: WorldPosition;
-
-    /**
-     * Parent region.
+     * Owning region.
+     *
+     * Climate, geology and other
+     * regional information should be
+     * obtained from the Region.
      */
     regionId: string;
 
     /**
-     * Future island ownership.
+     * Cell centre position on the planet.
      */
-    islandId?: string;
-
-    /**
-     * Land or ocean.
-     */
-    isLand: boolean;
-
-    /**
-     * Height relative to sea level.
-     */
-    elevationM: number;
-
-    /**
-     * Climate.
-     */
-    temperature: number;
-
-    moisture: number;
-
-    stormActivity: number;
-
-    /**
-     * Future biome assignment.
-     */
-    biomeId?: string;
-
-    /**
-     * Future resources.
-     */
-    resourceIds: string[];
+    center: WorldPosition;
 }

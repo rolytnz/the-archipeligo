@@ -7,6 +7,11 @@ import type {
 }
 from "@archipeligo/shared";
 
+import type {
+    RenderMode
+}
+from "./RenderMode.js";
+
 type Color =
     [
         number,
@@ -20,7 +25,7 @@ export class PlanetRenderer {
     public static render(
         scene: BABYLON.Scene,
         planet: Planet,
-        renderMode: string
+        renderMode: RenderMode
     ): void {
 
         const mesh =
@@ -39,7 +44,8 @@ export class PlanetRenderer {
             planet.mesh.indices;
 
         const normals:
-            number[] = [];
+            number[] =
+            [];
 
         BABYLON.VertexData.ComputeNormals(
 
@@ -83,40 +89,38 @@ export class PlanetRenderer {
 
     private static buildColors(
         planet: Planet,
-        renderMode: string
+        renderMode: RenderMode
     ): number[] {
 
         const colors:
-            number[] = [];
+            number[] =
+            [];
 
         const regionLookup =
-            new Map<
-                string,
-                Region
-            >();
-
-        for (
-            const region
-            of planet.regions
-        ) {
-
-            regionLookup.set(
-                region.id,
-                region
+            this.buildRegionLookup(
+                planet
             );
-        }
 
         for (
-            const cell
-            of planet.mesh.cells
+            let cellId = 0;
+            cellId <
+                planet.mesh.cells.length;
+            cellId++
         ) {
+
+            const cell =
+                planet.mesh.cells[
+                    cellId
+                ];
 
             const region =
                 regionLookup.get(
                     cell.regionId
                 );
 
-            if (!region) {
+            if (
+                !region
+            ) {
 
                 colors.push(
                     1,
@@ -129,15 +133,19 @@ export class PlanetRenderer {
             }
 
             const color =
-                this.getCellColor(
+                this.getRegionColor(
                     region,
                     renderMode
                 );
 
             colors.push(
+
                 color[0],
+
                 color[1],
+
                 color[2],
+
                 color[3]
             );
         }
@@ -145,46 +153,84 @@ export class PlanetRenderer {
         return colors;
     }
 
-    private static getCellColor(
+    private static buildRegionLookup(
+        planet: Planet
+    ): Map<
+        string,
+        Region
+    > {
+
+        const result =
+            new Map<
+                string,
+                Region
+            >();
+
+        for (
+            const region
+            of planet.regions
+        ) {
+
+            result.set(
+
+                region.id,
+
+                region
+            );
+        }
+
+        return result;
+    }
+
+    private static getRegionColor(
         region: Region,
-        renderMode: string
+        renderMode: RenderMode
     ): Color {
 
         switch (
             renderMode
         ) {
 
-            case "Temperature":
+            case "regions":
+
+                return this.regionColor(
+                    region.id
+                );
+
+            case "temperature":
 
                 return this.temperatureColor(
                     region.climate.temperature
                 );
 
-            case "Moisture":
+            case "moisture":
 
                 return this.moistureColor(
                     region.climate.moisture
                 );
 
-            case "Storms":
+            case "storms":
 
                 return this.stormColor(
-                    region.climate.stormActivity
+
+                    region.climate.temperature * region.climate.moisture
                 );
 
-            case "Volcanism":
+            case "volcanism":
 
                 return this.volcanismColor(
                     region.geology.volcanism
                 );
 
-            case "Resources":
+            case "resources":
 
-                return this.resourceColor(
-                    region.geology.resourceRichness
-                );
+                case "resources":
 
-            case "IslandDensity":
+                    return this.resourceColor(
+                        region.geology.volcanism * region.geology.islandDensity
+                    );
+
+            case "islandDensity":
 
                 return this.islandColor(
                     region.geology.islandDensity
@@ -192,9 +238,12 @@ export class PlanetRenderer {
 
             default:
 
-                return this.regionColor(
-                    region.id
-                );
+                return [
+                    1,
+                    0,
+                    1,
+                    1
+                ];
         }
     }
 
@@ -203,9 +252,13 @@ export class PlanetRenderer {
     ): Color {
 
         return [
+
             value,
+
             0,
+
             1 - value,
+
             1
         ];
     }
@@ -215,9 +268,13 @@ export class PlanetRenderer {
     ): Color {
 
         return [
+
             0,
+
             value,
+
             0,
+
             1
         ];
     }
@@ -227,9 +284,13 @@ export class PlanetRenderer {
     ): Color {
 
         return [
+
             value,
+
             value,
+
             0,
+
             1
         ];
     }
@@ -239,9 +300,13 @@ export class PlanetRenderer {
     ): Color {
 
         return [
+
             value,
+
             value * 0.35,
+
             0,
+
             1
         ];
     }
@@ -251,9 +316,13 @@ export class PlanetRenderer {
     ): Color {
 
         return [
+
             value,
+
             value,
+
             value * 0.2,
+
             1
         ];
     }
@@ -263,9 +332,13 @@ export class PlanetRenderer {
     ): Color {
 
         return [
+
             0,
+
             value,
+
             value,
+
             1
         ];
     }
@@ -281,11 +354,18 @@ export class PlanetRenderer {
 
         return [
 
-            (hash & 255) / 255,
+            (hash & 255)
+                / 255,
 
-            ((hash >> 8) & 255) / 255,
+            (
+                (hash >> 8)
+                & 255
+            ) / 255,
 
-            ((hash >> 16) & 255) / 255,
+            (
+                (hash >> 16)
+                & 255
+            ) / 255,
 
             1
         ];

@@ -1,5 +1,6 @@
 import {
-    WorldPosition
+    WorldPosition,
+    PlanetConstants
 }
 from "@archipeligo/shared";
 
@@ -20,21 +21,21 @@ export class RegionGenerator {
             ISeedService
     ) {}
 
-private influence(
-    seed: bigint,
-    domain: string
-): number {
+    private influence(
+        seed: bigint,
+        domain: string
+    ): number {
 
-    const derivedSeed =
-        this.seedService.deriveSeed(
-            seed,
-            domain
+        const derivedSeed =
+            this.seedService.deriveSeed(
+                seed,
+                domain
+            );
+
+        return this.nextNormalized(
+            derivedSeed
         );
-
-    return this.nextNormalized(
-        derivedSeed
-    );
-}
+    }
 
     public generate(
         planetSeed: bigint,
@@ -42,7 +43,12 @@ private influence(
     ): Region[] {
 
         const regions:
-            Region[] = [];
+            Region[] =
+            [];
+
+        const sites:
+            WorldPosition[] =
+            [];
 
         for (
             let regionId = 0;
@@ -56,6 +62,16 @@ private influence(
                     regionId
                 );
 
+            const site =
+                this.generateSite(
+                    regionSeed,
+                    sites
+                );
+
+            sites.push(
+                site
+            );
+
             regions.push({
 
                 id:
@@ -67,10 +83,7 @@ private influence(
                 seed:
                     regionSeed,
 
-                site:
-                    this.generateSite(
-                        regionSeed
-                    ),
+                site,
 
                 climate: {
 
@@ -84,12 +97,6 @@ private influence(
                         this.influence(
                             regionSeed,
                             "moisture"
-                        ),
-
-                    stormActivity:
-                        this.influence(
-                            regionSeed,
-                            "storms"
                         )
                 },
 
@@ -99,12 +106,6 @@ private influence(
                         this.influence(
                             regionSeed,
                             "volcanism"
-                        ),
-
-                    resourceRichness:
-                        this.influence(
-                            regionSeed,
-                            "resources"
                         ),
 
                     islandDensity:
@@ -133,43 +134,72 @@ private influence(
 
         return regions;
     }
-    
+
     private generateSite(
-        regionSeed: bigint
+        regionSeed: bigint,
+        existingSites: WorldPosition[]
     ): WorldPosition {
 
-        const bearingSeed =
-            this.seedService.deriveSeed(
-                regionSeed,
-                "bearing"
-            );
+        let attempt =
+            0;
 
-        const elevationSeed =
-            this.seedService.deriveSeed(
-                regionSeed,
-                "elevation"
-            );
+        while (
+            true
+        ) {
 
-        const bearing =
-            this.nextNormalized(
-                bearingSeed
-            ) * 360;
+            const candidateSeed =
+                this.seedService.deriveSeed(
+                    regionSeed,
+                    `attempt-${attempt++}`
+                );
 
-        const elevation =
-            (
-                this.nextNormalized(
-                    elevationSeed
-                ) * 180
-            ) - 90;
+            const bearingSeed =
+                this.seedService.deriveSeed(
+                    candidateSeed,
+                    "bearing"
+                );
 
-        return new WorldPosition(
+            const elevationSeed =
+                this.seedService.deriveSeed(
+                    candidateSeed,
+                    "elevation"
+                );
 
-            bearing,
+            const candidate =
+                new WorldPosition(
 
-            elevation,
+                    this.nextNormalized(
+                        bearingSeed
+                    ) * 360,
 
-            0
-        );
+                    (
+                        this.nextNormalized(
+                            elevationSeed
+                        ) * 180
+                    ) - 90,
+
+                    0
+                );
+
+            const tooClose =
+                existingSites.some(
+                    (
+                        site: WorldPosition
+                    ) =>
+                        candidate.angularDistanceTo(
+                            site
+                        ) <
+                        PlanetConstants
+                            .MinimumSiteSeparationDegrees
+                );
+
+            if (
+                !tooClose
+            ) {
+
+                return candidate;
+            }
+        }
     }
 
     private nextNormalized(

@@ -1,5 +1,14 @@
 import type {
-    Planet
+    Planet,
+    PlanetCell,
+    PlanetLoadRequest,
+    PlanetLoadResult,
+    PlanetSummary
+}
+from "@archipeligo/shared";
+
+import {
+    WorldPosition
 }
 from "@archipeligo/shared";
 
@@ -7,11 +16,6 @@ import type {
     IPlanetRepository
 }
 from "../../../world/repositories/IPlanetRepository.js";
-
-import type {
-    PlanetSummary
-}
-from "../../../world/repositories/PlanetSummary.js";
 
 import {
     DatabaseFactory
@@ -131,8 +135,8 @@ implements IPlanetRepository {
                     `
                     insert into region
                     (
-                        planet_id,
                         id,
+                        planet_id,
                         name,
                         seed,
 
@@ -141,10 +145,8 @@ implements IPlanetRepository {
 
                         temperature,
                         moisture,
-                        storm_activity,
 
                         volcanism,
-                        resource_richness,
                         island_density,
 
                         ancient_activity,
@@ -154,40 +156,28 @@ implements IPlanetRepository {
                     (
                         $1,$2,$3,$4,
                         $5,$6,
-                        $7,$8,$9,
-                        $10,$11,$12,
-                        $13,$14
+                        $7,$8,
+                        $9,$10,
+                        $11,$12
                     )
                     `,
                     [
-                        planet.id,
 
                         region.id,
-
+                        planet.id,
                         region.name,
-
-                        String(
-                            region.seed
-                        ),
+                        region.seed.toString(),
 
                         region.site.bearing,
-
                         region.site.elevation,
 
                         region.climate.temperature,
-
                         region.climate.moisture,
 
-                        region.climate.stormActivity,
-
                         region.geology.volcanism,
-
-                        region.geology.resourceRichness,
-
                         region.geology.islandDensity,
 
                         region.activity.ancientActivity,
-
                         region.activity.anomalyActivity
                     ]
                 );
@@ -219,47 +209,64 @@ implements IPlanetRepository {
                 `Saving ${planet.mesh.cells.length.toLocaleString()} cells...`
             );
 
+            const batchSize = 1000;
+
             for (
-                let cellId = 0;
-                cellId < planet.mesh.cells.length;
-                cellId++
+                let start = 0;
+                start < planet.mesh.cells.length;
+                start += batchSize
             ) {
 
-                const cell =
-                    planet.mesh.cells[
-                        cellId
-                    ];
+                const end =
+                    Math.min(
+                        start + batchSize,
+                        planet.mesh.cells.length
+                    );
 
-                const offset =
-                    cellId * 6;
+                const values:
+                    unknown[] =
+                    [];
 
-                await client.query(
-                    `
-                    insert into cell
-                    (
-                        planet_id,
-                        cell_id,
-                        region_id,
+                const placeholders:
+                    string[] =
+                    [];
 
-                        bearing,
-                        elevation,
+                let parameterIndex =
+                    1;
 
-                        neighbor_1,
-                        neighbor_2,
-                        neighbor_3,
-                        neighbor_4,
-                        neighbor_5,
-                        neighbor_6
-                    )
-                    values
-                    (
-                        $1,$2,$3,
-                        $4,$5,
-                        $6,$7,$8,
-                        $9,$10,$11
-                    )
-                    `,
-                    [
+                for (
+                    let cellId = start;
+                    cellId < end;
+                    cellId++
+                ) {
+
+                    const cell =
+                        planet.mesh.cells[
+                            cellId
+                        ];
+
+                    const offset =
+                        cellId * 6;
+
+                    placeholders.push(
+
+                        `(
+                            $${parameterIndex++},
+                            $${parameterIndex++},
+                            $${parameterIndex++},
+                            $${parameterIndex++},
+                            $${parameterIndex++},
+                            $${parameterIndex++},
+                            $${parameterIndex++},
+                            $${parameterIndex++},
+                            $${parameterIndex++},
+                            $${parameterIndex++},
+                            $${parameterIndex++}
+                        )`
+                    );
+
+                    values.push(
+
                         planet.id,
 
                         cellId,
@@ -293,24 +300,37 @@ implements IPlanetRepository {
                         planet.mesh.neighbors[
                             offset + 5
                         ]
-                    ]
-                );
-
-                if (
-                    cellId > 0 &&
-                    cellId % 10000 === 0
-                ) {
-
-                    Logger.debug(
-                        `Saved ${cellId.toLocaleString()} cells...`
                     );
                 }
+
+                await client.query(
+                    `
+                    insert into cell
+                    (
+                        planet_id,
+                        cell_id,
+                        region_id,
+
+                        bearing,
+                        elevation,
+
+                        neighbor_1,
+                        neighbor_2,
+                        neighbor_3,
+                        neighbor_4,
+                        neighbor_5,
+                        neighbor_6
+                    )
+                    values
+                    ${placeholders.join(",")}
+                    `,
+                    values
+                );
+
+                Logger.debug(
+                    `Saved ${end.toLocaleString()} of ${planet.mesh.cells.length.toLocaleString()} cells...`
+                );
             }
-
-            Logger.debug(
-                "Cells saved."
-            );
-
             //
             // Mesh
             //
@@ -495,14 +515,346 @@ implements IPlanetRepository {
     }
 
     public async load(
-        _planetId: string
+        request: PlanetLoadRequest
     ): Promise<
-        Planet | null
+        PlanetLoadResult | null
     > {
 
-        throw new Error(
-            "Planet loading not yet implemented."
-        );
+        const pool =
+            DatabaseFactory.getPool();
+
+        const client =
+            await pool.connect();
+
+        try {
+
+            Logger.info(
+                `Loading planet ${request.planetId}`
+            );
+
+            //
+            // Planet
+            //
+
+            const planetResult =
+                await client.query(
+                    `
+                    select *
+                    from planet
+                    where id = $1
+                    `,
+                    [
+                        request.planetId
+                    ]
+                );
+
+            if (
+                planetResult.rows.length === 0
+            ) {
+
+                Logger.warn(
+                    `Planet ${request.planetId} not found.`
+                );
+
+                return null;
+            }
+
+            const planetRow =
+                planetResult.rows[0];
+
+            Logger.debug(
+                `Found planet ${planetRow.id}`
+            );
+
+            //
+            // Regions
+            //
+
+            const regions =
+                request.regions
+                    ? (
+                        await client.query(
+                            `
+                            select *
+                            from region
+                            where planet_id = $1
+                            order by id
+                            `,
+                            [
+                                request.planetId
+                            ]
+                        )
+                    ).rows.map(
+                        row => ({
+
+                            id:
+                                row.id,
+
+                            name:
+                                row.name,
+
+                            seed:
+                                BigInt(
+                                    row.seed
+                                ),
+
+                            site:
+                                new WorldPosition(
+
+                                    row.bearing,
+
+                                    row.elevation,
+
+                                    0
+                                ),
+
+                            climate: {
+
+                                temperature:
+                                    row.temperature,
+
+                                moisture:
+                                    row.moisture
+                            },
+
+                            geology: {
+
+                                volcanism:
+                                    row.volcanism,
+
+                                islandDensity:
+                                    row.island_density
+                            },
+
+                            activity: {
+
+                                ancientActivity:
+                                    row.ancient_activity,
+
+                                anomalyActivity:
+                                    row.anomaly_activity
+                            }
+                        })
+                    )
+                    : [];
+
+            Logger.info(
+                `Loaded ${regions.length.toLocaleString()} regions.`
+            );
+
+            //
+            // Cells
+            //
+
+            let cells:
+                PlanetCell[] =
+                [];
+
+            let neighbors:
+                Int32Array =
+                    new Int32Array();
+
+            if (
+                request.cells
+            ) {
+
+                const cellResult =
+                    await client.query(
+                        `
+                        select *
+                        from cell
+                        where planet_id = $1
+                        order by cell_id
+                        `,
+                        [
+                            request.planetId
+                        ]
+                    );
+
+                cells =
+                    cellResult.rows.map(
+                        row => ({
+
+                            id:
+                                row.cell_id,
+
+                            regionId:
+                                row.region_id,
+
+                            center:
+                                new WorldPosition(
+
+                                    row.bearing,
+
+                                    row.elevation,
+
+                                    0
+                                )
+                        })
+                    );
+
+                Logger.info(
+                    `Loaded ${cells.length.toLocaleString()} cells.`
+                );
+            }
+
+            //
+            // Mesh
+            //
+
+            let vertices:
+                number[] =
+                [];
+
+            let indices:
+                number[] =
+                [];
+
+            if (
+                request.mesh
+            ) {
+
+                const meshResult =
+                    await client.query(
+                        `
+                        select *
+                        from planet_mesh
+                        where planet_id = $1
+                        `,
+                        [
+                            request.planetId
+                        ]
+                    );
+
+                if (
+                    meshResult.rows.length > 0
+                ) {
+
+                    const meshRow =
+                        meshResult.rows[0];
+
+                    vertices =
+                        Array.from(
+
+                            new Float32Array(
+
+                                meshRow.vertices.buffer,
+
+                                meshRow.vertices.byteOffset,
+
+                                meshRow.vertices.length / 4
+                            )
+                        );
+
+                    indices =
+                        Array.from(
+
+                            new Uint32Array(
+
+                                meshRow.indices.buffer,
+
+                                meshRow.indices.byteOffset,
+
+                                meshRow.indices.length / 4
+                            )
+                        );
+
+                    neighbors =
+                        new Int32Array(
+
+                            meshRow.neighbors.buffer,
+
+                            meshRow.neighbors.byteOffset,
+
+                            meshRow.neighbors.length / 4
+                        );
+
+                    Logger.info(
+                        "Loaded planet mesh."
+                    );
+
+                    Logger.debug(
+                        `Vertices: ${vertices.length.toLocaleString()}`
+                    );
+
+                    Logger.debug(
+                        `Indices: ${indices.length.toLocaleString()}`
+                    );
+
+                    Logger.debug(
+                        `Neighbors: ${neighbors.length.toLocaleString()}`
+                    );
+                }
+            }
+
+            //
+            // Assemble Planet
+            //
+
+            const planet: Planet = {
+
+                id:
+                    planetRow.id,
+
+                seed:
+                    BigInt(
+                        planetRow.seed
+                    ),
+
+                radiusKm:
+                    planetRow.radius_km,
+
+                regions,
+
+                mesh: {
+
+                    cells,
+
+                    vertices,
+
+                    indices,
+
+                    neighbors
+                }
+            };
+
+            Logger.info(
+                `Planet ${planet.id} loaded successfully.`
+            );
+
+            return {
+
+                planet,
+
+                loadedRegions:
+                    regions.length,
+
+                loadedCells:
+                    cells.length
+            };
+        }
+        catch (
+            error
+        ) {
+
+            Logger.error(
+                "Planet load failed."
+            );
+
+            Logger.error(
+                error
+            );
+
+            throw error;
+        }
+        finally {
+
+            client.release();
+
+            Logger.debug(
+                "Database connection released."
+            );
+        }
     }
 
     public async exists(

@@ -57,11 +57,6 @@ export interface RegionClimate {
      */
     moisture: number;
 
-    /**
-     * 0.0 = calm seas
-     * 1.0 = constant severe storms
-     */
-    stormActivity: number;
 }
 
 export interface RegionGeology {
@@ -71,12 +66,6 @@ export interface RegionGeology {
      * geothermal activity and mountain ranges.
      */
     volcanism: number;
-
-    /**
-     * Controls mineral deposits and
-     * overall resource quality.
-     */
-    resourceRichness: number;
 
     /**
      * Controls frequency of islands
