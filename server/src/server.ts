@@ -23,9 +23,14 @@ import {
 from "./infrastructure/database/DatabaseFactory.js";
 
 import {
-    Logger
+    Logger,
+    LogLevel
 }
-from "./infrastructure/logging/Logger.js";
+from "@archipeligo/shared";
+
+Logger.setLevel(
+    LogLevel.Debug
+);
 
 function serializeForJson(
     value: unknown

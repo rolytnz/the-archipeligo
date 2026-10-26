@@ -7,7 +7,7 @@ from "../pipeline/GenerationContext.js";
 import {
     Logger
 }
-from "../../infrastructure/logging/Logger.js";
+from "@archipeligo/shared";
 
 export class ClimateStage
     implements GenerationStage {

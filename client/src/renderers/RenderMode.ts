@@ -1,5 +1,14 @@
 export const RenderModes = {
 
+    Default: {
+
+        value:
+            "default",
+
+        label:
+            "Default"
+    },
+
     Regions: {
 
         value:

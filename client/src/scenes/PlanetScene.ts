@@ -2,7 +2,8 @@ import * as BABYLON
 from "@babylonjs/core";
 
 import type {
-    Planet
+    Planet,
+    Region
 }
 from "@archipeligo/shared";
 
@@ -16,6 +17,16 @@ import type {
 }
 from "../renderers/RenderMode.js";
 
+import {
+    Logger
+}
+from "@archipeligo/shared";
+
+import {
+    RegionInfoPanel
+}
+from "../ui/RegionInfoPanel.js";
+
 export function createScene(
     engine: BABYLON.Engine,
     canvas: HTMLCanvasElement,
@@ -23,10 +34,53 @@ export function createScene(
     renderMode: RenderMode
 ): BABYLON.Scene {
 
+    function regionareaKm2(
+        planet: Planet,
+        region: Region
+    ): number {
+
+        const regionCellCount =
+            planet.mesh.cells.filter(
+                cell =>
+                    cell.regionId ===
+                    region.id
+            ).length;
+
+        const totalCellCount =
+            planet.mesh.cells.length;
+
+        const planetAreaKm2 =
+            4 *
+            Math.PI *
+            60000 *
+            60000;
+
+        return (
+            planetAreaKm2 *
+            regionCellCount
+        ) /
+        totalCellCount;
+    }
+
     const scene =
         new BABYLON.Scene(
             engine
         );
+
+    RegionInfoPanel.initialize(
+        scene
+    );
+
+    RegionInfoPanel.onEnterRegion(
+        region => {
+
+            Logger.info(
+                `Entering region ${region.id}`
+            );
+
+            // GameplayRenderer.render(...)
+        }
+    );
 
     scene.clearColor =
         new BABYLON.Color4(
@@ -35,6 +89,7 @@ export function createScene(
             0.10,
             1
         );
+
 
     const camera =
         new BABYLON.ArcRotateCamera(
@@ -84,7 +139,7 @@ export function createScene(
         );
 
     hemisphericLight.intensity =
-        0.8;
+        1.0;
 
     const directionalLight =
         new BABYLON.DirectionalLight(
@@ -101,7 +156,7 @@ export function createScene(
         );
 
     directionalLight.intensity =
-        1.2;
+        1.0;
 
     PlanetRenderer.render(
 
@@ -109,7 +164,25 @@ export function createScene(
 
         planet,
 
-        renderMode
+        renderMode,
+
+        region => {
+
+            Logger.info(
+                `Selected region ${region.name}`
+            );
+
+            const areaKm2 =
+                regionareaKm2(
+                    planet,
+                    region
+                );
+
+            RegionInfoPanel.show(
+                region,
+                areaKm2
+            );
+        }
     );
 
     scene.onBeforeRenderObservable
@@ -131,3 +204,4 @@ export function createScene(
 
     return scene;
 }
+

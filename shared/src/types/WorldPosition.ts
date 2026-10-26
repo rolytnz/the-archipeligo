@@ -60,16 +60,16 @@ export class WorldPosition {
                 ),
 
             y:
+                Math.sin(
+                    latitude
+                ),
+
+            z:
                 Math.cos(
                     latitude
                 ) *
                 Math.sin(
                     longitude
-                ),
-
-            z:
-                Math.sin(
-                    latitude
                 )
         };
     }
@@ -159,14 +159,14 @@ export class WorldPosition {
 
         const latitude =
             Math.asin(
-                z
+                y
             ) *
             180 /
             Math.PI;
 
         let longitude =
             Math.atan2(
-                y,
+                z,
                 x
             ) *
             180 /

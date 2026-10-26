@@ -23,9 +23,10 @@ import {
 from "../DatabaseFactory.js";
 
 import {
-    Logger
+    Logger,
+    LogLevel
 }
-from "../../logging/Logger.js";
+from "@archipeligo/shared";
 
 export class PostgresPlanetRepository
 implements IPlanetRepository {

@@ -13,6 +13,8 @@ cmd prompt
         npm init -y
         npm install -D vite
         npm install @babylonjs/core
+        npm install @babylonjs/gui
+        npm install simplex-noise
         npm install -D typecript
         npx tsc --init
 

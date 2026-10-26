@@ -20,6 +20,16 @@ import {
 }
 from "./renderers/RenderMode.js";
 
+import {
+    Logger,
+    LogLevel
+}
+from "@archipeligo/shared";
+
+Logger.setLevel(
+    LogLevel.Debug
+);
+
 const canvas =
     document.getElementById(
         "renderCanvas"
