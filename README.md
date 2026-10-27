@@ -1,4 +1,4 @@
-The fleshing out and development of a long imagined game concept in the spirt of the Microprose game "Carrier Command".
+The fleshing out and development of a long imagined game concept in the spirit of the Microprose game "Carrier Command".
 
 I am using AI to build and code this, so don't hate on me - please, it's just me and I am in control, and it's just me coding at the moment. I am very aware of AI slop and I don't want this to be that.
 
